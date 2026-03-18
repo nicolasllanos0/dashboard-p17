@@ -302,6 +302,7 @@ function render(){
   curUUNN = document.getElementById('selUUNN').value;
   curFMT  = document.getElementById('selFMT').value;
   curFCST = document.getElementById('selFCST').value;
+  updateSelects();
   updateChips();
 
   var recs=getFiltered(), tree=buildTree(recs), visMes=getMths(curPeriod);
@@ -585,24 +586,69 @@ function setPeriod(p,btn){
 }
 
 /* ── INIT ── */
+/* ── FILTROS ENCADENADOS ── */
+function rebuildSelect(id, vals, curVal, allLabel, isFCST){
+  var sel = document.getElementById(id);
+  var prevVal = vals.indexOf(curVal) >= 0 ? curVal : '_ALL';
+  sel.innerHTML = '';
+  vals.forEach(function(v){
+    var o = document.createElement('option');
+    o.value = v;
+    o.text  = v === '_ALL' ? allLabel : (isFCST ? 'FCST: '+v : (v||'-'));
+    if(v === prevVal) o.selected = true;
+    sel.appendChild(o);
+  });
+  return prevVal;
+}
+
+function updateSelects(){
+  var curU = document.getElementById('selUUNN').value;
+  var curF = document.getElementById('selFMT').value;
+  var curC = document.getElementById('selFCST').value;
+
+  /* Validos para UUNN: matchean FMT y FCST actuales */
+  var forU = RECORDS.filter(function(r){
+    return (curF==='_ALL'||r.fm===curF) && (curC==='_ALL'||r.f===curC);
+  });
+  var uSet = {}; forU.forEach(function(r){uSet[r.u]=1;});
+  var uVals = ['_ALL'].concat(Object.keys(uSet).sort());
+
+  /* Validos para FMT: matchean UUNN y FCST actuales */
+  var forF = RECORDS.filter(function(r){
+    return (curU==='_ALL'||r.u===curU) && (curC==='_ALL'||r.f===curC);
+  });
+  var fSet = {}; forF.forEach(function(r){fSet[r.fm]=1;});
+  var fVals = ['_ALL'].concat(Object.keys(fSet).sort());
+
+  /* Validos para FCST: matchean UUNN y FMT actuales */
+  var forC = RECORDS.filter(function(r){
+    return (curU==='_ALL'||r.u===curU) && (curF==='_ALL'||r.fm===curF);
+  });
+  var cSet = {}; forC.forEach(function(r){cSet[r.f]=1;});
+  var cVals = ['_ALL'].concat(Object.keys(cSet).sort());
+
+  /* Reconstruir cada select manteniendo seleccion si sigue siendo valida */
+  curUUNN = rebuildSelect('selUUNN', uVals, curU, 'Todas las UUNN',    false);
+  curFMT  = rebuildSelect('selFMT',  fVals, curF, 'Todos los Formatos', false);
+  curFCST = rebuildSelect('selFCST', cVals, curC, 'Todos',              true);
+}
+
 function init(){
-  /* UUNN */
-  var uSel=document.getElementById('selUUNN');
+  /* Carga inicial: todos los valores disponibles */
   DATA.uunns.forEach(function(u){
     var o=document.createElement('option');o.value=u;
-    o.text=u==='_ALL'?'Todas las UUNN':(u||'-');uSel.appendChild(o);
+    o.text=u==='_ALL'?'Todas las UUNN':(u||'-');
+    document.getElementById('selUUNN').appendChild(o);
   });
-  /* FORMATO */
-  var fmtSel=document.getElementById('selFMT');
   DATA.formatos.forEach(function(f){
     var o=document.createElement('option');o.value=f;
-    o.text=f==='_ALL'?'Todos los Formatos':(f||'-');fmtSel.appendChild(o);
+    o.text=f==='_ALL'?'Todos los Formatos':(f||'-');
+    document.getElementById('selFMT').appendChild(o);
   });
-  /* FCST */
-  var cSel=document.getElementById('selFCST');
   DATA.fcsts.forEach(function(f){
     var o=document.createElement('option');o.value=f;
-    o.text=f==='_ALL'?'Todos':('FCST: '+f);cSel.appendChild(o);
+    o.text=f==='_ALL'?'Todos':('FCST: '+f);
+    document.getElementById('selFCST').appendChild(o);
   });
   document.getElementById('metaLine').textContent=
     'BD SAP a Dic-25  |  '+DATA.records.length+' registros  |  Generado: '+DATA.generado;
